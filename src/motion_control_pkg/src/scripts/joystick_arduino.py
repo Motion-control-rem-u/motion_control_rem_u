@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
+
 #import rospy
-#from master_msgs.msg import traction_Orders
 import pygame
 import math
 import numpy as np
-#from std_msgs.msg import Int16MultiArray, Int32MultiArray
 import serial
+import time
 
 #PERMITE USAR EL JOYSTICK Y ENVIAR LA INFORMACION POR USB(Serial) AL ARDUINO.
 #ROBOCOL
 
-arduino = serial.Serial('/dev/ttyACM0', 115200, timeout=10)
+arduino = serial.Serial('/dev/ttyACM0', 9600, timeout=10)
+
+modo="d"
 
 # Referencia del objeto del joystick
 joystick_ref = None
@@ -26,6 +28,10 @@ axis3 = 0
 axis_moved = False
 # Maximas rpm de las llantas
 max_rpm = 250
+# Deadzone de la rotacion del joystick
+deadzone_rot = 0.30
+#Deadzone del moviemiento del joystick
+deadzone_stick = 0.10
 
 # Caracteristicas del Joystick
 # Numero de botones = 13
@@ -44,7 +50,7 @@ max_rpm = 250
 # JOYBUTTONUP = 11
 
 def node_joystick_traction():
-    global joystick_ref, axis_moved, axis0, axis1, axis2, axis3, arduino
+    global joystick_ref, axis_moved, axis0, axis1, axis2, axis3, deadzone, arduino
     # Se inicializa el nodo de deteccion del joystick fisico llamado node_joystick_traction
     #rospy.init_node('node_joystick_traction', anonymous=True)
     # Publica en el topico pwm_data
@@ -52,15 +58,19 @@ def node_joystick_traction():
     #pub_traction_orders = rospy.Publisher("/robocol/fpga/rpm", Int32MultiArray, queue_size=10)
     
     # Se define la tasa a la cual se ejecuta el nodo
-    #rate = rospy.Rate(10)
+    # rate = rospy.Rate(10)
+
+
     # Iniciliza modulos de pygame necesarios para el llamado de eventos
     pygame.init()
     # Inicilizar el modulo pygame la deteccion del joystick
     pygame.joystick.init()
+
     # Referencia a envio de mensaje
-    # No estoy seguro de esto
-    order = [0,0]
-    #[FL,FR,BL,BR,0,0]
+    order = [0,0,modo]
+    #[Lado izquierdo, lado derecho, modo (Adelante, atras, neutro, freno)]
+
+
     #pub_order = Int32MultiArray()
 
     print('Esperando...')
@@ -68,6 +78,8 @@ def node_joystick_traction():
     #while pygame.joystick.get_count() != 1 and not rospy.is_shutdown():
         #rate.sleep()
     print('Conectado')
+
+
     # Se crea la referencia al joystick
     joystick_ref = pygame.joystick.Joystick(0)
     # Se inicializa el joystick de esa referencia
@@ -78,29 +90,63 @@ def node_joystick_traction():
     while ref_try_axis_3 == joystick_ref.get_axis(3): #and not rospy.is_shutdown():
         #rate.sleep()
         pygame.event.clear()
-        print('Palanca')
-    #     pass
-    # Se corre el nodo hasta que este se finalice
+        print('Mover palanca para calibrar')
+        pass  # Se corre el nodo hasta que este se finalice
+    
+
+    left,right = 0,0
     while True:#not rospy.is_shutdown():
         empty_event_queue()
-        #print('segundo while')
+
         if axis_moved:
-            #print('entra if')
+
             axis0 = joystick_ref.get_axis(0)
             axis1 = joystick_ref.get_axis(1)
             axis2 = joystick_ref.get_axis(2)
             axis3 = joystick_ref.get_axis(3)
-            #print(axis0, axis1, axis2, axis3)
-            if round(axis2,1) == 0:
-                left, rigth = steering(axis1, axis0, max_rpm*(-axis3+1)/2)
+            
+            if abs(round(axis2,1)) <= deadzone_rot:
+                left, right = stick_steering(axis1, axis0, max_rpm*(-axis3+1)/2)
             else:
-                left, rigth = int((max_rpm*(-axis3+1)/2)*axis2), int(-(max_rpm*(-axis3+1)/2)*axis2)
-            order[0], order[1] = np.abs(left), np.abs(rigth)
-            #order[2], order[3] = np.abs(left), np.abs(rigth)
-            #order[0], order[1] = left, rigth
-            #order[2], order[3] = left, rigth
-            print(order)
-            arduino.write(order)
+                left, right = int((max_rpm*(-axis3+1)/2)*axis2), int(-(max_rpm*(-axis3+1)/2)*axis2)
+
+            left = str(left)
+            right = str(right)
+
+            if(len(left)==1):
+                left = "000"+left
+            elif(len(left) == 2):
+                if (left[0]=="-"):
+                    left = "-00" + left[1]
+                else:
+                    left = "00" + left
+            elif(len(left) == 3):
+                if (left[0]=="-"):
+                    left = "-0" + left[1]+left[2]
+                else:
+                    left = "0" + left
+
+            if(len(right)==1):
+                right = "000"+right
+            elif(len(right) == 2):
+                if (right[0]=="-"):
+                    right = "-00" + right[1]
+                else:
+                    right = "00" + right
+            elif(len(right) == 3):
+                if (right[0]=="-"):
+                    right = "-0" + right[1]+right[2]
+                else:
+                    right = "0" + right
+            time.sleep(0.5)
+            order[0], order[1] = left, right
+            #order[2], order[3] = np.abs(left), np.abs(right)
+            #order[0], order[1] = left, right
+            #order[2], order[3] = left, right
+            encoded = (str(order)+"\n").encode('utf-8')
+            print(encoded)
+            arduino.write(encoded)
+            #time.sleep(1)
             #order.header.stamp = rospy.Time.now()
             #order.header.seq = order.pub_order.data = orderheader.seq + 1
             #order.sensibility = int(max_rpm*(-axis3+1)/2)
@@ -108,11 +154,9 @@ def node_joystick_traction():
             
             #pub_traction_orders.publish(pub_order)
             axis_moved = False
-			
-        left, rigth = 0,0
 
-        order[0], order[1] = left, rigth
-        #order[2], order[3] = left, rigth
+        order[0], order[1] = 0,0
+        #order[2], order[3] = left, right
         #order.header.stamp = rospy.Time.now()
         #order.header.seq = order.header.seq + 1
         #order.sensibility = int(100)
@@ -121,7 +165,7 @@ def node_joystick_traction():
         axis_moved = False
         #rate.sleep()
 
-def steering(x, y, sensibilidad_rcv):
+def stick_steering(x, y, sensibilidad_rcv):
     # Convierte a polar
     r = math.hypot(-x, -y)
     t = math.atan2(-y, -x)
@@ -136,6 +180,12 @@ def steering(x, y, sensibilidad_rcv):
     # clamp to -1/+1
     left = max(min(left, 1), -1)
     right = max(min(right, 1), -1)
+
+    min_mov = deadzone_stick*math.sqrt(2)
+
+    if(r<=min_mov):
+        left,right = 0,0
+
     return int(sensibilidad_rcv*left), int(sensibilidad_rcv*right)
 
 def empty_event_queue():
