@@ -112,32 +112,36 @@ def node_joystick_traction():
 
             left = str(left)
             right = str(right)
+            len_left = len(left)
+            len_right = len(right)
 
-            if(len(left)==1):
+            if(len_left==1):
                 left = "000"+left
-            elif(len(left) == 2):
+            elif(len_left == 2):
                 if (left[0]=="-"):
                     left = "-00" + left[1]
                 else:
                     left = "00" + left
-            elif(len(left) == 3):
+            elif(len_left == 3):
                 if (left[0]=="-"):
                     left = "-0" + left[1]+left[2]
                 else:
                     left = "0" + left
 
-            if(len(right)==1):
+            if(len_right==1):
                 right = "000"+right
-            elif(len(right) == 2):
+            elif(len_right == 2):
                 if (right[0]=="-"):
                     right = "-00" + right[1]
                 else:
                     right = "00" + right
-            elif(len(right) == 3):
+            elif(len_right == 3):
                 if (right[0]=="-"):
                     right = "-0" + right[1]+right[2]
                 else:
                     right = "0" + right
+
+            
             time.sleep(0.5)
             order[0], order[1] = left, right
             #order[2], order[3] = np.abs(left), np.abs(right)
