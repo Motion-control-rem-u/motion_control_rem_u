@@ -10,7 +10,7 @@ import time
 #PERMITE USAR EL JOYSTICK Y ENVIAR LA INFORMACION POR USB(Serial) AL ARDUINO.
 #ROBOCOL
 
-arduino = serial.Serial('/dev/ttyACM0', 9600, timeout=10)
+arduino = serial.Serial('/dev/ttyACM0', 115200, timeout=10)
 
 modo="d"
 
