@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
 
-#import rospy
+from geometry_msgs import msg
+import rospy
 import pygame
 import math
 import numpy as np
 import serial
 import time
+from std_msgs.msg import Int32MultiArray, Bool
 
 #PERMITE USAR EL JOYSTICK Y ENVIAR LA INFORMACION POR USB(Serial) AL ARDUINO.
 #ROBOCOL
 
+auto = 1
+uso_arduino = 0
 arduino = serial.Serial('/dev/ttyACM0', 115200, timeout=10)
+arduino.close()
+
 
 modo="d"
 
@@ -49,17 +55,35 @@ deadzone_stick = 0.10
 # JOYBUTTONDOWN = 10
 # JOYBUTTONUP = 11
 
+def habilitarMov(msg): #Me indica si debo mover el robot autonomamente o no
+    global auto,arduino,uso_arduino
+    auto = msg.data
+    if auto == 1 and uso_arduino == 0:
+        uso_arduino = 1
+        arduino = serial.Serial('/dev/ttyACM0', 115200, timeout=10)
+    else:
+        uso_arduino = 0
+        arduino.close()
+
+    print('auto:' + str(auto))
+
+
+
 def node_joystick_traction():
     global joystick_ref, axis_moved, axis0, axis1, axis2, axis3, deadzone, arduino
     # Se inicializa el nodo de deteccion del joystick fisico llamado node_joystick_traction
-    #rospy.init_node('node_joystick_traction', anonymous=True)
+    rospy.init_node('node_joystick_traction', anonymous=True)
     # Publica en el topico pwm_data
-    #pub_traction_orders = rospy.Publisher("/robocol/traction/pwm_data", Int16MultiArray, queue_size=10)
+    pub_traction_orders = rospy.Publisher("Robocol/MotionControl/pwm_data", Int32MultiArray, queue_size=10)
     #pub_traction_orders = rospy.Publisher("/robocol/fpga/rpm", Int32MultiArray, queue_size=10)
-    
+    rospy.Subscriber('Robocol/MotionControl/flag_autonomo',Bool,habilitarMov, tcp_nodelay=True)
     # Se define la tasa a la cual se ejecuta el nodo
-    # rate = rospy.Rate(10)
+    rate = rospy.Rate(10)
 
+    soloPrintearUnaVez = 0
+
+    #Esta variable se encargara de saber si debemos abrir o no el puerto serial de arduino
+    uso_arduino = 0
 
     # Iniciliza modulos de pygame necesarios para el llamado de eventos
     pygame.init()
@@ -71,7 +95,7 @@ def node_joystick_traction():
     #[Lado izquierdo, lado derecho, modo (Adelante, atras, neutro, freno)]
 
 
-    #pub_order = Int32MultiArray()
+    pub_order = Int32MultiArray()
 
     print('Esperando...')
     # Espera a que se conecte el joystick fisico al computador
@@ -95,79 +119,96 @@ def node_joystick_traction():
     
 
     left,right = 0,0
-    while True:#not rospy.is_shutdown():
+    while not rospy.is_shutdown():
         empty_event_queue()
+        if soloPrintearUnaVez == 0 and auto == True:
+            print('Esperando que flag_autonomo sea False...')
+            soloPrintearUnaVez = 1
 
-        if axis_moved:
-
-            axis0 = joystick_ref.get_axis(0)
-            axis1 = joystick_ref.get_axis(1)
-            axis2 = joystick_ref.get_axis(2)
-            axis3 = joystick_ref.get_axis(3)
+        auto = False #Comentar cuando se quiera probar con teclado
+        
+        if auto == False:
+            soloPrintearUnaVez = 0
+            #if uso_arduino == 0:
+                #uso_arduino = 1
+                #Habilita comunicacion serial con el arduino
+                #arduino = serial.Serial('/dev/ttyACM0', 115200, timeout=10)	
             
-            if abs(round(axis2,1)) <= deadzone_rot:
-                left, right = stick_steering(axis1, axis0, max_rpm*(-axis3+1)/2)
-            else:
-                left, right = int((max_rpm*(-axis3+1)/2)*axis2), int(-(max_rpm*(-axis3+1)/2)*axis2)
+            if axis_moved:
 
-            left = str(left)
-            right = str(right)
-            len_left = len(left)
-            len_right = len(right)
+                axis0 = joystick_ref.get_axis(0)
+                axis1 = joystick_ref.get_axis(1)
+                axis2 = joystick_ref.get_axis(2)
+                axis3 = joystick_ref.get_axis(3)
+                
+                if abs(round(axis2,1)) <= deadzone_rot:
+                    left, right = stick_steering(axis1, axis0, max_rpm*(-axis3+1)/2)
+                else:
+                    left, right = int((max_rpm*(-axis3+1)/2)*axis2), int(-(max_rpm*(-axis3+1)/2)*axis2)
 
-            if(len_left==1):
-                left = "000"+left
-            elif(len_left == 2):
-                if (left[0]=="-"):
-                    left = "-00" + left[1]
-                else:
-                    left = "00" + left
-            elif(len_left == 3):
-                if (left[0]=="-"):
-                    left = "-0" + left[1]+left[2]
-                else:
-                    left = "0" + left
+                left = str(left)
+                right = str(right)
+                len_left = len(left)
+                len_right = len(right)
 
-            if(len_right==1):
-                right = "000"+right
-            elif(len_right == 2):
-                if (right[0]=="-"):
-                    right = "-00" + right[1]
-                else:
-                    right = "00" + right
-            elif(len_right == 3):
-                if (right[0]=="-"):
-                    right = "-0" + right[1]+right[2]
-                else:
-                    right = "0" + right
+                if(len_left==1):
+                    left = "000"+left
+                elif(len_left == 2):
+                    if (left[0]=="-"):
+                        left = "-00" + left[1]
+                    else:
+                        left = "00" + left
+                elif(len_left == 3):
+                    if (left[0]=="-"):
+                        left = "-0" + left[1]+left[2]
+                    else:
+                        left = "0" + left
 
-            
-            time.sleep(0.5)
-            order[0], order[1] = left, right
-            #order[2], order[3] = np.abs(left), np.abs(right)
-            #order[0], order[1] = left, right
+                if(len_right==1):
+                    right = "000"+right
+                elif(len_right == 2):
+                    if (right[0]=="-"):
+                        right = "-00" + right[1]
+                    else:
+                        right = "00" + right
+                elif(len_right == 3):
+                    if (right[0]=="-"):
+                        right = "-0" + right[1]+right[2]
+                    else:
+                        right = "0" + right
+
+                
+                time.sleep(0.5)
+                order[0], order[1] = left, right
+                #order[2], order[3] = np.abs(left), np.abs(right)
+                #order[0], order[1] = left, right
+                #order[2], order[3] = left, right
+                encoded = (str(order)+"\n").encode('utf-8')
+                print(encoded)
+                if uso_arduino == 1:
+                    arduino.write(encoded)
+                #time.sleep(1)
+                #order.header.stamp = rospy.Time.now()
+                #order.header.seq = order.pub_order.data = orderheader.seq + 1
+                #order.sensibility = int(max_rpm*(-axis3+1)/2)
+                pub_order.data = order
+                
+                pub_traction_orders.publish(pub_order)
+                axis_moved = False
+
+            order[0], order[1] = 0,0
             #order[2], order[3] = left, right
-            encoded = (str(order)+"\n").encode('utf-8')
-            print(encoded)
-            arduino.write(encoded)
-            #time.sleep(1)
             #order.header.stamp = rospy.Time.now()
-            #order.header.seq = order.pub_order.data = orderheader.seq + 1
-            #order.sensibility = int(max_rpm*(-axis3+1)/2)
-            #pub_order.data = order
-            
-            #pub_traction_orders.publish(pub_order)
+            #order.header.seq = order.header.seq + 1
+            #order.sensibility = int(100)
+            pub_order.data = order
+            pub_traction_orders.publish(pub_order)
             axis_moved = False
-
-        order[0], order[1] = 0,0
-        #order[2], order[3] = left, right
-        #order.header.stamp = rospy.Time.now()
-        #order.header.seq = order.header.seq + 1
-        #order.sensibility = int(100)
-        #pub_order.data = order
-        #pub_traction_orders.publish(pub_order)
-        axis_moved = False
-        #rate.sleep()
+            rate.sleep()
+        else:
+            #arduino.close()
+            #uso_arduino = 0
+            rate.sleep()
 
 def stick_steering(x, y, sensibilidad_rcv):
     # Convierte a polar

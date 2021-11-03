@@ -19,9 +19,6 @@ global K_alpha, K_rho, K_beta, vel_adjust
 #RECIBE LAS INDICACIONES PARA HACER EL RECORRIDO Y MUEVE AL ROBOT - VERSION 4
 #ROBOCOL
 
-#Habilita comunicacion serial con el arduino
-#arduino = serial.Serial('/dev/ttyACM0', 115200, timeout=10)
-
 modo="d" #Modo para funcionamiento de drivers (d=drive, b=break, r=reverse)
 
 pos_x, pos_y, theta = 0, 0, 0
@@ -30,6 +27,9 @@ deltaX, deltaY = 0, 0
 
 rho = 0
 auto = 0
+uso_arduino = 0
+arduino = serial.Serial('/dev/ttyACM0', 115200, timeout=10)
+arduino.close()
 hayRuta = 1 #poner en cero cuando se vaya a probar con planeacion
 ruta = np.array([])
 panic = False
@@ -65,8 +65,15 @@ def vel_adjust_callback(msg):
 	print('Se ajusta la velocidad por: ',round(vel_adjust,3))
 
 def habilitarMov(msg): #Me indica si debo mover el robot autonomamente o no
-	global auto
+	global auto,arduino,uso_arduino
 	auto = msg.data
+	if auto == 1 and uso_arduino == 0:
+		uso_arduino = 1
+		arduino = serial.Serial('/dev/ttyACM0', 115200, timeout=10)
+	else:
+		uso_arduino = 0
+		arduino.close()
+
 	print('auto:' + str(auto))
 
 
@@ -113,12 +120,14 @@ def main_control():
 	rospy.Subscriber('Robocol/MotionControl/kp', Float32, vel_adjust_callback, tcp_nodelay=True)
 
 	#ruta = np.array([[-0.3,-0.3], [-0.3,0.3]])
-	ruta = np.array([[0.5,0.0],[0.5,0.5],[0.00,0.5]])
+	ruta = np.array([[2,0.0],[2,1],[0,1]])
 
 	vel_robot = Float32MultiArray()
 	pos_robot = Twist()
 	pos_final_robot = Twist()
 
+	#Esta variable se encargara de saber si debemos abrir o no el puerto serial de arduino
+	uso_arduino = 0
 
 	rho = np.sqrt(endPos[0]**2 + endPos[1]**2)
 	alpha = -theta + np.arctan2(endPos[1], endPos[0])
@@ -128,14 +137,18 @@ def main_control():
 	order = [0,0,modo]
 	left,right = 0,0
 
-	auto = True
+	#auto = True #Desactivar para cuando se quiera correr con teclado.py
 
 	while not rospy.is_shutdown():
+
+		#Esta variable se encarga de que cuando se cambie entre joystick y autonomo, el robot siempre vuelva a 
+		#ajustar el angulo sin importar si antes del cambio estaba ajustando rho
 		empezarDeNuevo = False
 		v_vel = 0
 		w_vel = 0
-		vel_robot.data = [0,0]
-		pub.publish(vel_robot)
+		vr, vl = 0,0
+		vel_robot.data = [vr,vl]
+		#pub.publish(vel_robot)
 
 		print('Hay ruta?  ' + ('Si' if hayRuta == 1 else 'No'))
 		
@@ -152,6 +165,7 @@ def main_control():
 		pos_final_robot.angular.z = round(endPos[2],3)
 		pub_pos_final_status.publish(pos_final_robot)
 
+		
 		
 		while hayRuta == 1:
 			pos_final_robot.linear.z = 0 #Indica que no ha llegado al destino.
@@ -193,6 +207,7 @@ def main_control():
 				while empezarDeNuevo == True:
 					while abs(alpha) > 0.15:
 						if auto == True:
+
 							print('EndPos: ' + str(endPos[0]) + ' ' + str(endPos[1]) + ' ' + str(round(endPos[2],3)) + ' | rho: ' + str(round(rho,3)) + ' | ALFA: ' + str(round(alpha,3)) + ' | Pose: ' + str(round(pos_x,3)) + ', ' + str(round(pos_y,3)) + ', ' + str(round(theta,3)))
 							sys.stdout.write("\033[K") # Clear to the end of line
 							sys.stdout.write("\033[F") # Cursor up one line
@@ -256,7 +271,8 @@ def main_control():
 							order[0], order[1] = left, right
 							encoded = (str(order)+"\n").encode('utf-8')
 							#print(encoded)
-							#arduino.write(encoded)
+							if uso_arduino == 1:
+								arduino.write(encoded)
 
 							pos_robot.linear.x = round(pos_x,3)
 							pos_robot.linear.y = round(pos_y,3)
@@ -274,16 +290,11 @@ def main_control():
 							sys.stdout.write("\033[F") # Cursor up one line
 							time.sleep(1)
 							rate.sleep()
-
 					K_alpha = 0.35
 					empezarDeNuevo = False
 					while rho > 0.1 and empezarDeNuevo == False:
 						if auto == True:
-							
-							print('EndPos: ' + str(endPos[0]) + ' ' + str(endPos[1]) + ' ' + str(round(endPos[2],3)) + ' | RHO: ' + str(round(rho,3)) + ' | alfa: ' + str(round(alpha,3)) + ' | Pose: ' + str(round(pos_x,3)) + ', ' + str(round(pos_y,3)) + ', ' + str(round(theta,3)))#+ ' | v_omega: ' + str(round(v_omega,3)))
-							sys.stdout.write("\033[K") # Clear to the end of line
-							sys.stdout.write("\033[F") # Cursor up one line
-							time.sleep(1)
+
 							deltaX = endPos[0] - pos_x
 							deltaY = endPos[1] - pos_y
 							deltatheta = endPos[2] - theta
@@ -351,7 +362,8 @@ def main_control():
 							order[0], order[1] = left, right
 							encoded = (str(order)+"\n").encode('utf-8')
 							#print(encoded)
-							#arduino.write(encoded)
+							if uso_arduino == 1:
+								arduino.write(encoded)
 
 							pub.publish(vel_robot)
 							pub_alpha_status.publish(alpha)
@@ -367,6 +379,11 @@ def main_control():
 							pos_final_robot.linear.y = round(endPos[1],3)
 							pos_final_robot.angular.z = round(endPos[2],3)
 							pub_pos_final_status.publish(pos_final_robot)
+
+							print('EndPos: ' + str(endPos[0]) + ' ' + str(endPos[1]) + ' ' + str(round(endPos[2],3)) + ' | RHO: ' + str(round(rho,3)) + ' | alfa: ' + str(round(alpha,3)) + ' | Pose: ' + str(round(pos_x,3)) + ', ' + str(round(pos_y,3)) + ', ' + str(round(theta,3))+ ' | vel_robot: ' + str(vel_robot.data))
+							sys.stdout.write("\033[K") # Clear to the end of line
+							sys.stdout.write("\033[F") # Cursor up one line
+							time.sleep(1)
 
 
 							rate.sleep()
