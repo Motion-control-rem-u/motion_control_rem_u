@@ -3,6 +3,7 @@ import rospy
 import numpy as np
 import sys
 import time
+import serial
 from geometry_msgs.msg import *
 from nav_msgs.msg import Odometry
 from tf.transformations import euler_from_quaternion
@@ -17,6 +18,11 @@ global K_alpha, K_rho, K_beta, vel_adjust
 #Implementacion para moverlo con Arduinos - Tatacoa 2021-2
 #RECIBE LAS INDICACIONES PARA HACER EL RECORRIDO Y MUEVE AL ROBOT - VERSION 4
 #ROBOCOL
+
+#Habilita comunicacion serial con el arduino
+arduino = serial.Serial('/dev/ttyACM0', 115200, timeout=10)
+
+modo="d" #Modo para funcionamiento de drivers (d=drive, b=break, r=reverse)
 
 pos_x, pos_y, theta = 0, 0, 0
 
@@ -118,6 +124,10 @@ def main_control():
 	alpha = -theta + np.arctan2(endPos[1], endPos[0])
 	beta = -theta - alpha
 
+	# Referencia a envio de mensaje
+	order = [0,0,modo]
+	left,right = 0,0
+
 	#auto = True
 
 	while not rospy.is_shutdown():
@@ -210,6 +220,44 @@ def main_control():
 							pub.publish(vel_robot)
 							pub_alpha_status.publish(alpha)
 
+							#Procedimiento para codificar el mensaje y enviarlo a Arduino.
+							left = str(w_vel + vel_adjust)
+							right = str(-w_vel + vel_adjust)
+							len_left = len(left)
+							len_right = len(right)
+
+							if(len_left==1):
+								left = "000"+left
+							elif(len_left == 2):
+								if (left[0]=="-"):
+									left = "-00" + left[1]
+								else:
+									left = "00" + left
+							elif(len_left == 3):
+								if (left[0]=="-"):
+									left = "-0" + left[1]+left[2]
+								else:
+									left = "0" + left
+
+							if(len_right==1):
+								right = "000"+right
+							elif(len_right == 2):
+								if (right[0]=="-"):
+									right = "-00" + right[1]
+								else:
+									right = "00" + right
+							elif(len_right == 3):
+								if (right[0]=="-"):
+									right = "-0" + right[1]+right[2]
+								else:
+									right = "0" + right
+
+							time.sleep(0.5)
+							order[0], order[1] = left, right
+							encoded = (str(order)+"\n").encode('utf-8')
+							#print(encoded)
+							arduino.write(encoded)
+
 							pos_robot.linear.x = round(pos_x,3)
 							pos_robot.linear.y = round(pos_y,3)
 							pos_robot.angular.z = round(theta,3)
@@ -267,6 +315,44 @@ def main_control():
 							
 							vel_robot.data = [vl + vel_adjust, vr + vel_adjust]
 
+							#Procedimiento para codificar el mensaje y enviarlo a Arduino.
+							left = str(vl + vel_adjust)
+							right = str(vr + vel_adjust)
+							len_left = len(left)
+							len_right = len(right)
+
+							if(len_left==1):
+								left = "000"+left
+							elif(len_left == 2):
+								if (left[0]=="-"):
+									left = "-00" + left[1]
+								else:
+									left = "00" + left
+							elif(len_left == 3):
+								if (left[0]=="-"):
+									left = "-0" + left[1]+left[2]
+								else:
+									left = "0" + left
+
+							if(len_right==1):
+								right = "000"+right
+							elif(len_right == 2):
+								if (right[0]=="-"):
+									right = "-00" + right[1]
+								else:
+									right = "00" + right
+							elif(len_right == 3):
+								if (right[0]=="-"):
+									right = "-0" + right[1]+right[2]
+								else:
+									right = "0" + right
+
+							time.sleep(0.5)
+							order[0], order[1] = left, right
+							encoded = (str(order)+"\n").encode('utf-8')
+							#print(encoded)
+							arduino.write(encoded)
+
 							pub.publish(vel_robot)
 							pub_alpha_status.publish(alpha)
 							pub_rho_status.publish(rho) #Se publica el rho del robot a status
@@ -276,7 +362,6 @@ def main_control():
 							pos_robot.linear.y = round(pos_y,3)
 							pos_robot.angular.z = round(theta,3)
 							pub_pos_status.publish(pos_robot)
-
 
 							pos_final_robot.linear.x = round(endPos[0],3)
 							pos_final_robot.linear.y = round(endPos[1],3)
@@ -310,7 +395,6 @@ def main_control():
 				pos_robot.angular.z = round(theta,3)
 				pub_pos_status.publish(pos_robot)
 
-
 				pos_final_robot.linear.x = round(endPos[0],3)
 				pos_final_robot.linear.y = round(endPos[1],3)
 				pos_final_robot.angular.z = round(endPos[2],3)
@@ -329,5 +413,3 @@ if __name__ == '__main__':
 		main_control()
 	except rospy.ROSInterruptException:
 		print('Nodo detenido')
-
-
