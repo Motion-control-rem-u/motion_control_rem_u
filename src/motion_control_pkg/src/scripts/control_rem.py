@@ -20,7 +20,7 @@ global K_alpha, K_rho, K_beta, vel_adjust
 #ROBOCOL
 
 #Habilita comunicacion serial con el arduino
-arduino = serial.Serial('/dev/ttyACM0', 115200, timeout=10)
+#arduino = serial.Serial('/dev/ttyACM0', 115200, timeout=10)
 
 modo="d" #Modo para funcionamiento de drivers (d=drive, b=break, r=reverse)
 
@@ -106,14 +106,14 @@ def main_control():
 	pub_alpha_status = rospy.Publisher('Robocol/MotionControl/alpha', Float32, queue_size=10)
 
 	rate = rospy.Rate(10) #10hz
-	rospy.Subscriber("zed2/odom", Odometry, position_callback, tcp_nodelay=True)
+	rospy.Subscriber("/camera/odom/sample", Odometry, position_callback, tcp_nodelay=True)
 	rospy.Subscriber('Robocol/MotionControl/flag_autonomo',Bool,habilitarMov, tcp_nodelay=True)
 	rospy.Subscriber("Robocol/MotionControl/ruta", numpy_msg(Floats), ruta_callback, tcp_nodelay=True)
 	rospy.Subscriber('Robocol/MotionControl/flag_panic', Bool, panic_callback, tcp_nodelay=True)
 	rospy.Subscriber('Robocol/MotionControl/kp', Float32, vel_adjust_callback, tcp_nodelay=True)
 
 	#ruta = np.array([[-0.3,-0.3], [-0.3,0.3]])
-	ruta = np.array([[2.5,0.019],[1.5,1],[-0.035,0.0189]])
+	ruta = np.array([[0.5,0.0],[0.5,0.5],[0.00,0.5]])
 
 	vel_robot = Float32MultiArray()
 	pos_robot = Twist()
@@ -128,7 +128,7 @@ def main_control():
 	order = [0,0,modo]
 	left,right = 0,0
 
-	#auto = True
+	auto = True
 
 	while not rospy.is_shutdown():
 		empezarDeNuevo = False
@@ -191,7 +191,7 @@ def main_control():
 
 				empezarDeNuevo = True
 				while empezarDeNuevo == True:
-					while abs(alpha) > 0.05:
+					while abs(alpha) > 0.15:
 						if auto == True:
 							print('EndPos: ' + str(endPos[0]) + ' ' + str(endPos[1]) + ' ' + str(round(endPos[2],3)) + ' | rho: ' + str(round(rho,3)) + ' | ALFA: ' + str(round(alpha,3)) + ' | Pose: ' + str(round(pos_x,3)) + ', ' + str(round(pos_y,3)) + ', ' + str(round(theta,3)))
 							sys.stdout.write("\033[K") # Clear to the end of line
@@ -256,7 +256,7 @@ def main_control():
 							order[0], order[1] = left, right
 							encoded = (str(order)+"\n").encode('utf-8')
 							#print(encoded)
-							arduino.write(encoded)
+							#arduino.write(encoded)
 
 							pos_robot.linear.x = round(pos_x,3)
 							pos_robot.linear.y = round(pos_y,3)
@@ -277,7 +277,7 @@ def main_control():
 
 					K_alpha = 0.35
 					empezarDeNuevo = False
-					while rho > 0.05 and empezarDeNuevo == False:
+					while rho > 0.1 and empezarDeNuevo == False:
 						if auto == True:
 							
 							print('EndPos: ' + str(endPos[0]) + ' ' + str(endPos[1]) + ' ' + str(round(endPos[2],3)) + ' | RHO: ' + str(round(rho,3)) + ' | alfa: ' + str(round(alpha,3)) + ' | Pose: ' + str(round(pos_x,3)) + ', ' + str(round(pos_y,3)) + ', ' + str(round(theta,3)))#+ ' | v_omega: ' + str(round(v_omega,3)))
@@ -351,7 +351,7 @@ def main_control():
 							order[0], order[1] = left, right
 							encoded = (str(order)+"\n").encode('utf-8')
 							#print(encoded)
-							arduino.write(encoded)
+							#arduino.write(encoded)
 
 							pub.publish(vel_robot)
 							pub_alpha_status.publish(alpha)
