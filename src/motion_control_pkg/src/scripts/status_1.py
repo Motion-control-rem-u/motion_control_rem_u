@@ -11,8 +11,8 @@ pos_x_info_anterior = 0
 pos_y_info_anterior = 0
 theta_info_anterior = 0
 cont = 0
-vel_lin_x_info = 0
-vel_ang_z_info = 0
+vel_izq = 0
+vel_der = 0
 rho_info, alpha_info = 0,0
 pos_x_info, pos_y_info, theta_info = 0,0,0
 pos_x_final_info, pos_y_final_info, theta_final_info, llegoAlaMeta = 0,0,0,0
@@ -27,9 +27,9 @@ def panic_callback(msg):
 	panic = msg.data
 
 def cmd_vel_callback(msg):
-	global vel_lin_x_info, vel_ang_z_info
-	vel_lin_x_info = msg.linear.x
-	vel_ang_z_info = msg.angular.z
+	global vel_izq, vel_der
+	vel_izq = msg[0]
+	vel_der = msg[1]
 
 def rho_callback(msg):
 	global rho_info
@@ -74,11 +74,11 @@ def vel_adjust_callback(msg):
 
 
 def info_status():
-	global vel_lin_x_info, vel_ang_z_info, rho_info, pos_x_info_anterior, pos_y_info_anterior, theta_info_anterior, cont, pos_x_info, pos_y_info, theta_info, pos_x_final_info, pos_y_final_info, theta_final_info, llegoAlaMeta, panic, puntos_faltantes_info
+	global vel_izq, vel_der, rho_info, pos_x_info_anterior, pos_y_info_anterior, theta_info_anterior, cont, pos_x_info, pos_y_info, theta_info, pos_x_final_info, pos_y_final_info, theta_final_info, llegoAlaMeta, panic, puntos_faltantes_info
 
 	rospy.init_node('status', anonymous=True)  # Inicia el nodo status
 
-	rospy.Subscriber("cmd_vel", Twist, cmd_vel_callback, tcp_nodelay=True)
+	rospy.Subscriber("cmd_wheels_vel", Float32MultiArray, cmd_vel_callback, tcp_nodelay=True)
 	rospy.Subscriber("Robocol/MotionControl/rho", Float32, rho_callback, tcp_nodelay=True)
 	rospy.Subscriber("Robocol/MotionControl/alpha", Float32, alpha_callback, tcp_nodelay=True)
 	rospy.Subscriber("Robocol/MotionControl/pos", Twist, pos_callback, tcp_nodelay=True)
@@ -92,7 +92,7 @@ def info_status():
 
 	while not rospy.is_shutdown():
 		mensaje = '______________________________ \n'
-		mensaje = mensaje + 'Vel. lin. x: ' + str(round(vel_lin_x_info,3)) + ' | Vel. ang. z: ' + str(round(vel_ang_z_info,3)) + '\n'
+		mensaje = mensaje + 'Vel. Izq: ' + str(round(vel_izq,3)) + ' | Vel. Der: ' + str(round(vel_der,3)) + '\n'
 		mensaje = mensaje + 'Rho: ' + str(round(rho_info,3)) + ' | Alpha: ' + str(round(alpha_info,3)) + '\n'
 		mensaje = mensaje + 'pos. x: ' + str(pos_x_info) + ' | pos. y: ' + str(pos_y_info) + ' | theta: ' + str(theta_info) + '\n'
 		mensaje = mensaje + 'pos. final x: ' + str(pos_x_final_info) + ' | pos. final y: ' + str(pos_y_final_info) + ' | theta final: ' + str(theta_final_info) + '\n'
@@ -105,11 +105,11 @@ def info_status():
 			mensaje = mensaje + 'No ha llegado' + '\n'
 
 		#if (cont >= 1000):
-		if vel_lin_x_info < 0.01 and vel_lin_x_info > -0.01 and vel_ang_z_info < 0.01:
+		if vel_izq < 0.01 and vel_izq > -0.01 and vel_der < 0.01:
 			mensaje = mensaje + 'Detenido \n'
 		else:
 			mensaje = mensaje + 'En movimiento'
-			if vel_lin_x_info < 0:
+			if vel_izq < 0:
 				mensaje = mensaje + ' - Voy hacia atras.'
 			mensaje = mensaje + '\n'
 		
