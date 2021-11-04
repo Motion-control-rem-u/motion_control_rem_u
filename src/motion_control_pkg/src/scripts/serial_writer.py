@@ -2,6 +2,7 @@
 import rospy
 from std_msgs.msg import Float32MultiArray, Bool, Int32MultiArray
 import serial
+import serial.tools.list_ports
 import time
 
 #OBTIENE PWM DE CONTROL AUTONOMO O DE MANUAL Y LO ESCRIBE POR SERIAL.
@@ -13,9 +14,18 @@ flag_autonomo = Bool()
 vel_izq, vel_der, auto_vel_izq, auto_vel_der = 0,0,0,0
 modo = "d"
 auto = False
+puerto = ''
+
+#Verificamos el puerto del arduino para hacer la conexion
+ports = list(serial.tools.list_ports.comports())
+for p in ports:
+	print(p.description)
+	if "ttyACM" in p.description:
+		print("This is an Arduino!")
+		puerto = p.description
 
 #Crea la conexion serial con el Arduino
-arduino = serial.Serial('/dev/ttyACM0', 115200, timeout=10)
+arduino = serial.Serial('/dev/'+str(puerto), 115200, timeout=10)
 
 def habilitarMov(msg): #Me indica si debo mover el robot autonomamente o no
 	global auto,arduino,uso_arduino
