@@ -1,12 +1,10 @@
 #!/usr/bin/env python
 
-from geometry_msgs import msg
 import rospy
 import pygame
 import math
-import serial
 import time
-from std_msgs.msg import Int32MultiArray, Bool
+from std_msgs.msg import Int32MultiArray
 
 #PERMITE USAR EL JOYSTICK Y PUBLICA LOS PWM AL ARDUINO.
 #Corre en el PC
@@ -15,9 +13,6 @@ from std_msgs.msg import Int32MultiArray, Bool
 
 auto = 1
 uso_arduino = 0
-arduino = serial.Serial('/dev/ttyACM0', 115200, timeout=10)
-arduino.close()
-
 
 modo="d"
 

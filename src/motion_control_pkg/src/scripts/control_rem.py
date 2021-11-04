@@ -17,7 +17,8 @@ global K_alpha, K_rho, K_beta, vel_adjust
 #Implementacion para moverlo con Vel_izq y Vel_Der - Tatacoa 2021-2
 #RECIBE LAS INDICACIONES PARA HACER EL RECORRIDO Y MUEVE AL ROBOT - VERSION 80
 #funciona con joystick_publisher.py y serial_writer.py
-#ROBOCOL
+#Se corre en la Jetson.
+#ROBOCOL - 2021-2
 
 modo="d" #Modo para funcionamiento de drivers (d=drive, b=break, r=reverse)
 
