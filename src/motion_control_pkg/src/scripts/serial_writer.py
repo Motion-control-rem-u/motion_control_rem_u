@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 import rospy
 import sys
 from std_msgs.msg import Float32MultiArray, Bool, Int32MultiArray
@@ -46,7 +46,7 @@ def rover_serial_writer():
 
 	order = [0,0,modo]
 	left,right = 0,0
-	
+
 	while not rospy.is_shutdown():
 
 		#Si estamos en modo manual, usamos lo que manda el joystick

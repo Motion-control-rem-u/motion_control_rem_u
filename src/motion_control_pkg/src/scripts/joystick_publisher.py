@@ -1,10 +1,9 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 from geometry_msgs import msg
 import rospy
 import pygame
 import math
-import numpy as np
 import serial
 import time
 from std_msgs.msg import Int32MultiArray, Bool
