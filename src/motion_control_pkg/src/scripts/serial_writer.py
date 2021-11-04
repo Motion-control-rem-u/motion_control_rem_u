@@ -10,8 +10,9 @@ import time
 #ROBOCOL 2021-2
 
 flag_autonomo = Bool()
-auto_vel_izq, auto_vel_der = 0,0
+vel_izq, vel_der, auto_vel_izq, auto_vel_der = 0,0,0,0
 modo = "d"
+auto = False
 
 #Crea la conexion serial con el Arduino
 arduino = serial.Serial('/dev/ttyACM0', 115200, timeout=10)
@@ -34,7 +35,7 @@ def manual_vel_callback(msg):
 
 
 def rover_serial_writer():
-	print('Starting rover_teleop node and publishing flag_autonomo...')
+	print('Starting Arduino Serial Comunication node... \n')
 	rospy.init_node('rover_teleop', anonymous=True)  # Inicia el nodo teleop
 
 	rospy.Subscriber("Robocol/MotionControl/cmd_wheels_vel", Float32MultiArray, auto_vel_callback, tcp_nodelay=True)
@@ -45,7 +46,7 @@ def rover_serial_writer():
 
 	order = [0,0,modo]
 	left,right = 0,0
-
+	print('Waiting for flag_autonomo...')
 	while not rospy.is_shutdown():
 
 		#Si estamos en modo manual, usamos lo que manda el joystick
