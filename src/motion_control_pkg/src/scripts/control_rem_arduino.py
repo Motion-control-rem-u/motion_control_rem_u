@@ -3,6 +3,7 @@ import rospy
 import numpy as np
 import sys
 import time
+import serial
 from geometry_msgs.msg import *
 from nav_msgs.msg import Odometry
 from tf.transformations import euler_from_quaternion
@@ -14,9 +15,9 @@ global pos_x, pos_y, theta, deltaX, deltaY
 global rate, rho, auto, ruta, hayRuta
 global K_alpha, K_rho, K_beta, vel_adjust
 
-#Implementacion para moverlo con Vel_izq y Vel_Der - Tatacoa 2021-2
-#RECIBE LAS INDICACIONES PARA HACER EL RECORRIDO Y MUEVE AL ROBOT - VERSION 80
-#funciona con joystick_publisher.py y serial_writer.py
+#Implementacion para moverlo escribe directamente en el Arduino - Tatacoa 2021-2
+#RECIBE LAS INDICACIONES PARA HACER EL RECORRIDO Y MUEVE AL ROBOT - VERSION 79
+#Funciona con joystick_arduino.py y teclado.py
 #ROBOCOL
 
 modo="d" #Modo para funcionamiento de drivers (d=drive, b=break, r=reverse)
@@ -27,6 +28,9 @@ deltaX, deltaY = 0, 0
 
 rho = 0
 auto = 0
+uso_arduino = 0
+arduino = serial.Serial('/dev/ttyACM0', 115200, timeout=10)
+arduino.close()
 hayRuta = 1 #poner en cero cuando se vaya a probar con planeacion
 ruta = np.array([])
 panic = False
@@ -62,8 +66,14 @@ def vel_adjust_callback(msg):
 	print('Se ajusta la velocidad por: ',round(vel_adjust,3))
 
 def habilitarMov(msg): #Me indica si debo mover el robot autonomamente o no
-	global auto
+	global auto,arduino,uso_arduino
 	auto = msg.data
+	if auto == 1 and uso_arduino == 0:
+		uso_arduino = 1
+		arduino = serial.Serial('/dev/ttyACM0', 115200, timeout=10)
+	else:
+		uso_arduino = 0
+		arduino.close()
 
 	print('auto:' + str(auto))
 
@@ -126,8 +136,9 @@ def main_control():
 
 	# Referencia a envio de mensaje
 	order = [0,0,modo]
+	left,right = 0,0
 
-	auto = True #Desactivar para cuando se quiera correr con teclado.py
+	#auto = True #Desactivar para cuando se quiera correr con teclado.py
 
 	while not rospy.is_shutdown():
 
@@ -137,7 +148,7 @@ def main_control():
 		v_vel = 0
 		w_vel = 0
 		vr, vl = 0,0
-		vel_robot.data = [vl,vr]
+		vel_robot.data = [vr,vl]
 		#pub.publish(vel_robot)
 
 		print('Hay ruta?  ' + ('Si' if hayRuta == 1 else 'No'))
@@ -221,10 +232,48 @@ def main_control():
 
 							w_vel = K_alpha*alpha + K_beta*beta
 
-							order[0], order[1] = w_vel, -w_vel #CAMBIAR ESTO ESTA MAL]
-							vel_robot.data = order
+							vel_robot.data= [w_vel, -w_vel] #CAMBIAR ESTO ESTA MAL]
 							pub.publish(vel_robot)
 							pub_alpha_status.publish(alpha)
+
+							#Procedimiento para codificar el mensaje y enviarlo a Arduino.
+							left = str(w_vel + vel_adjust)
+							right = str(-w_vel + vel_adjust)
+							len_left = len(left)
+							len_right = len(right)
+
+							if(len_left==1):
+								left = "000"+left
+							elif(len_left == 2):
+								if (left[0]=="-"):
+									left = "-00" + left[1]
+								else:
+									left = "00" + left
+							elif(len_left == 3):
+								if (left[0]=="-"):
+									left = "-0" + left[1]+left[2]
+								else:
+									left = "0" + left
+
+							if(len_right==1):
+								right = "000"+right
+							elif(len_right == 2):
+								if (right[0]=="-"):
+									right = "-00" + right[1]
+								else:
+									right = "00" + right
+							elif(len_right == 3):
+								if (right[0]=="-"):
+									right = "-0" + right[1]+right[2]
+								else:
+									right = "0" + right
+
+							time.sleep(0.5)
+							order[0], order[1] = left, right
+							encoded = (str(order)+"\n").encode('utf-8')
+							#print(encoded)
+							if uso_arduino == 1:
+								arduino.write(encoded)
 
 							pos_robot.linear.x = round(pos_x,3)
 							pos_robot.linear.y = round(pos_y,3)
@@ -275,8 +324,47 @@ def main_control():
 								vr = -((v_vel + w_vel*(l/2))/r)
 								vl = -((v_vel - w_vel*(l/2))/r)
 								#print('----------------Voy Hacia Atras--------------------V_X: ' + str(round(v_x, 3)))
-							order[0], order[1] = vl + vel_adjust, vr + vel_adjust
-							vel_robot.data = order
+							
+							vel_robot.data = [vl + vel_adjust, vr + vel_adjust]
+
+							#Procedimiento para codificar el mensaje y enviarlo a Arduino.
+							left = str(vl + vel_adjust)
+							right = str(vr + vel_adjust)
+							len_left = len(left)
+							len_right = len(right)
+
+							if(len_left==1):
+								left = "000"+left
+							elif(len_left == 2):
+								if (left[0]=="-"):
+									left = "-00" + left[1]
+								else:
+									left = "00" + left
+							elif(len_left == 3):
+								if (left[0]=="-"):
+									left = "-0" + left[1]+left[2]
+								else:
+									left = "0" + left
+
+							if(len_right==1):
+								right = "000"+right
+							elif(len_right == 2):
+								if (right[0]=="-"):
+									right = "-00" + right[1]
+								else:
+									right = "00" + right
+							elif(len_right == 3):
+								if (right[0]=="-"):
+									right = "-0" + right[1]+right[2]
+								else:
+									right = "0" + right
+
+							time.sleep(0.5)
+							order[0], order[1] = left, right
+							encoded = (str(order)+"\n").encode('utf-8')
+							#print(encoded)
+							if uso_arduino == 1:
+								arduino.write(encoded)
 
 							pub.publish(vel_robot)
 							pub_alpha_status.publish(alpha)
@@ -297,6 +385,7 @@ def main_control():
 							sys.stdout.write("\033[K") # Clear to the end of line
 							sys.stdout.write("\033[F") # Cursor up one line
 							time.sleep(1)
+
 
 							rate.sleep()
 						else:

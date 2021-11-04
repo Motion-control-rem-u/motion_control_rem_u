@@ -1,17 +1,24 @@
 #!/usr/bin/env python3
 
-#import rospy
+from geometry_msgs import msg
+import rospy
 import pygame
 import math
 import numpy as np
 import serial
 import time
+from std_msgs.msg import Int32MultiArray, Bool
 
-#PERMITE USAR EL JOYSTICK Y ENVIAR LA INFORMACION POR USB(Serial) AL ARDUINO.
-#Funciona SOLO, nada de ROS. SOLO PARA PRUEBAS
-#ROBOCOL 2021-2
+#PERMITE USAR EL JOYSTICK Y PUBLICA LOS PWM AL ARDUINO.
+#Corre en el PC
+#Funciona con control_rem.py y serial_writer.py
+#ROBOCOL - 2021-2
 
+auto = 1
+uso_arduino = 0
 arduino = serial.Serial('/dev/ttyACM0', 115200, timeout=10)
+arduino.close()
+
 
 modo="d"
 
@@ -50,17 +57,17 @@ deadzone_stick = 0.10
 # JOYBUTTONDOWN = 10
 # JOYBUTTONUP = 11
 
+
+
 def node_joystick_traction():
     global joystick_ref, axis_moved, axis0, axis1, axis2, axis3, deadzone, arduino
     # Se inicializa el nodo de deteccion del joystick fisico llamado node_joystick_traction
-    #rospy.init_node('node_joystick_traction', anonymous=True)
+    rospy.init_node('node_joystick_traction', anonymous=True)
     # Publica en el topico pwm_data
-    #pub_traction_orders = rospy.Publisher("/robocol/traction/pwm_data", Int16MultiArray, queue_size=10)
+    pub_traction_orders = rospy.Publisher("Robocol/MotionControl/pwm_data", Int32MultiArray, queue_size=10)
     #pub_traction_orders = rospy.Publisher("/robocol/fpga/rpm", Int32MultiArray, queue_size=10)
-    
     # Se define la tasa a la cual se ejecuta el nodo
-    # rate = rospy.Rate(10)
-
+    rate = rospy.Rate(10)
 
     # Iniciliza modulos de pygame necesarios para el llamado de eventos
     pygame.init()
@@ -72,7 +79,7 @@ def node_joystick_traction():
     #[Lado izquierdo, lado derecho, modo (Adelante, atras, neutro, freno)]
 
 
-    #pub_order = Int32MultiArray()
+    pub_order = Int32MultiArray()
 
     print('Esperando...')
     # Espera a que se conecte el joystick fisico al computador
@@ -91,14 +98,14 @@ def node_joystick_traction():
     while ref_try_axis_3 == joystick_ref.get_axis(3): #and not rospy.is_shutdown():
         #rate.sleep()
         pygame.event.clear()
-        print('Mover palanca para calibrar')
+        print('Mover palanca')
         pass  # Se corre el nodo hasta que este se finalice
     
 
     left,right = 0,0
-    while True:#not rospy.is_shutdown():
+    while not rospy.is_shutdown():
         empty_event_queue()
-
+        
         if axis_moved:
 
             axis0 = joystick_ref.get_axis(0)
@@ -111,38 +118,6 @@ def node_joystick_traction():
             else:
                 left, right = int((max_rpm*(-axis3+1)/2)*axis2), int(-(max_rpm*(-axis3+1)/2)*axis2)
 
-            left = str(left)
-            right = str(right)
-            len_left = len(left)
-            len_right = len(right)
-
-            if(len_left==1):
-                left = "000"+left
-            elif(len_left == 2):
-                if (left[0]=="-"):
-                    left = "-00" + left[1]
-                else:
-                    left = "00" + left
-            elif(len_left == 3):
-                if (left[0]=="-"):
-                    left = "-0" + left[1]+left[2]
-                else:
-                    left = "0" + left
-
-            if(len_right==1):
-                right = "000"+right
-            elif(len_right == 2):
-                if (right[0]=="-"):
-                    right = "-00" + right[1]
-                else:
-                    right = "00" + right
-            elif(len_right == 3):
-                if (right[0]=="-"):
-                    right = "-0" + right[1]+right[2]
-                else:
-                    right = "0" + right
-
-            
             time.sleep(0.5)
             order[0], order[1] = left, right
             #order[2], order[3] = np.abs(left), np.abs(right)
@@ -150,14 +125,14 @@ def node_joystick_traction():
             #order[2], order[3] = left, right
             encoded = (str(order)+"\n").encode('utf-8')
             print(encoded)
-            arduino.write(encoded)
+
             #time.sleep(1)
             #order.header.stamp = rospy.Time.now()
             #order.header.seq = order.pub_order.data = orderheader.seq + 1
             #order.sensibility = int(max_rpm*(-axis3+1)/2)
-            #pub_order.data = order
+            pub_order.data = order
             
-            #pub_traction_orders.publish(pub_order)
+            pub_traction_orders.publish(pub_order)
             axis_moved = False
 
         order[0], order[1] = 0,0
@@ -165,10 +140,11 @@ def node_joystick_traction():
         #order.header.stamp = rospy.Time.now()
         #order.header.seq = order.header.seq + 1
         #order.sensibility = int(100)
-        #pub_order.data = order
-        #pub_traction_orders.publish(pub_order)
+        pub_order.data = order
+        pub_traction_orders.publish(pub_order)
         axis_moved = False
-        #rate.sleep()
+        rate.sleep()
+
 
 def stick_steering(x, y, sensibilidad_rcv):
     # Convierte a polar
