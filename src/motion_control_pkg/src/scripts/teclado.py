@@ -1,10 +1,11 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 import rospy
 import sys
 from std_msgs.msg import Bool
 
 #MANEJA EL ROBOT CON EL TECLADO U OPRIMIENDO K CAMBIA AL CONTROL AUTOMATICO
 #DESPUES DE CORRER ESTE CORRER EL NODO DE control_sim
+#Enviar 'k' para cambiar de modo
 #ROBOCOL
 
 flag_autonomo = Bool()
