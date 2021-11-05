@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import rospy
-from std_msgs.msg import Float32MultiArray, Bool, Int32MultiArray
+from std_msgs.msg import Float32MultiArray, Bool, Int16MultiArray
 import serial
 import serial.tools.list_ports
 import time
@@ -35,13 +35,13 @@ def habilitarMov(msg): #Me indica si debo mover el robot autonomamente o no
 
 def auto_vel_callback(msg):
 	global auto_vel_izq, auto_vel_der
-	auto_vel_izq = msg[0]
-	auto_vel_der = msg[1]
+	auto_vel_izq = msg.data[0]
+	auto_vel_der = msg.data[1]
 
 def manual_vel_callback(msg):
 	global vel_izq, vel_der
-	vel_izq = msg[0]
-	vel_der = msg[1]
+	vel_izq = msg.data[0]
+	vel_der = msg.data[1]
 
 
 def rover_serial_writer():
@@ -49,7 +49,7 @@ def rover_serial_writer():
 	rospy.init_node('rover_teleop', anonymous=True)  # Inicia el nodo teleop
 
 	rospy.Subscriber("Robocol/MotionControl/cmd_wheels_vel", Float32MultiArray, auto_vel_callback, tcp_nodelay=True)
-	rospy.Subscriber("Robocol/MotionControl/pwm_data", Int32MultiArray, manual_vel_callback, tcp_nodelay=True)
+	rospy.Subscriber("Robocol/MotionControl/pwm_data", Float32MultiArray, manual_vel_callback, tcp_nodelay=True)
 	rospy.Subscriber('Robocol/MotionControl/flag_autonomo',Bool,habilitarMov, tcp_nodelay=True)
 
 	rate = rospy.Rate(10)
@@ -67,6 +67,7 @@ def rover_serial_writer():
 		else:
 			left = auto_vel_izq
 			right = auto_vel_izq
+		print(left, right)
 		
 		left = str(left)
 		right = str(right)
@@ -99,10 +100,13 @@ def rover_serial_writer():
 			else:
 				right = "0" + right
 
-		time.sleep(0.5)
+		time.sleep(0.8)
 		order[0], order[1] = left, right
 		encoded = (str(order)+"\n").encode('utf-8')
 		arduino.write(encoded)
+
+		#print(encoded)
+
 		rate.sleep()
 	#rate.sleep()
 

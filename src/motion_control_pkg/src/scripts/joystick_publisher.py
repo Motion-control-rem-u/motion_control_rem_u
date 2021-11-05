@@ -1,10 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import rospy
-import pygame
 import math
 import time
-from std_msgs.msg import Int32MultiArray
+from std_msgs.msg import Int16MultiArray, Float32MultiArray
+import pygame
 
 #PERMITE USAR EL JOYSTICK Y PUBLICA LOS PWM AL ARDUINO.
 #Corre en el PC
@@ -58,7 +58,7 @@ def node_joystick_traction():
     # Se inicializa el nodo de deteccion del joystick fisico llamado node_joystick_traction
     rospy.init_node('node_joystick_traction', anonymous=True)
     # Publica en el topico pwm_data
-    pub_traction_orders = rospy.Publisher("Robocol/MotionControl/pwm_data", Int32MultiArray, queue_size=10)
+    pub_traction_orders = rospy.Publisher("Robocol/MotionControl/pwm_data", Float32MultiArray, queue_size=10)
     #pub_traction_orders = rospy.Publisher("/robocol/fpga/rpm", Int32MultiArray, queue_size=10)
     # Se define la tasa a la cual se ejecuta el nodo
     rate = rospy.Rate(10)
@@ -69,11 +69,11 @@ def node_joystick_traction():
     pygame.joystick.init()
 
     # Referencia a envio de mensaje
-    order = [0,0,modo]
-    #[Lado izquierdo, lado derecho, modo (Adelante, atras, neutro, freno)]
+    order = [0,0]
+    #[Lado izquierdo, lado derecho, 6 (Adelante, atras, neutro, freno)]
 
 
-    pub_order = Int32MultiArray()
+    pub_order = Float32MultiArray()
 
     print('Esperando...')
     # Espera a que se conecte el joystick fisico al computador
@@ -117,8 +117,8 @@ def node_joystick_traction():
             #order[2], order[3] = np.abs(left), np.abs(right)
             #order[0], order[1] = left, right
             #order[2], order[3] = left, right
-            encoded = (str(order)+"\n").encode('utf-8')
-            print(encoded)
+            #encoded = (str(order)+"\n").encode('utf-8')
+            print(order)
 
             #time.sleep(1)
             #order.header.stamp = rospy.Time.now()
@@ -134,8 +134,8 @@ def node_joystick_traction():
         #order.header.stamp = rospy.Time.now()
         #order.header.seq = order.header.seq + 1
         #order.sensibility = int(100)
-        pub_order.data = order
-        pub_traction_orders.publish(pub_order)
+        #pub_order.data = order
+        #pub_traction_orders.publish(pub_order)
         axis_moved = False
         rate.sleep()
 

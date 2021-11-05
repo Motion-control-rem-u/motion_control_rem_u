@@ -97,7 +97,7 @@ def main_control():
 	rospy.init_node('control', anonymous=True) #Inicio nodo
 
 	#Publica las velocidades para ruedas a la derecha e izquierda.
-	pub = rospy.Publisher('cmd_wheels_vel', Float32MultiArray, queue_size=10)
+	pub = rospy.Publisher('Robocol/MotionControl/cmd_wheels_vel', Float32MultiArray, queue_size=10)
 	pub_probe = rospy.Publisher('probe_deployment_unit/drop', Empty, queue_size=1)
 	pub_pos_status = rospy.Publisher('Robocol/MotionControl/pos', Twist, queue_size=10)
 	pub_pos_final_status = rospy.Publisher('Robocol/MotionControl/pos_final', Twist, queue_size=10)
@@ -112,7 +112,7 @@ def main_control():
 	rospy.Subscriber('Robocol/MotionControl/kp', Float32, vel_adjust_callback, tcp_nodelay=True)
 
 	#ruta = np.array([[-0.3,-0.3], [-0.3,0.3]])
-	ruta = np.array([[2,0.0],[2,1],[0,1]])
+	ruta = np.array([[15,0.0],[15,15],[0,1]])
 
 	vel_robot = Float32MultiArray()
 	pos_robot = Twist()
@@ -126,7 +126,7 @@ def main_control():
 	beta = -theta - alpha
 
 	# Referencia a envio de mensaje
-	order = [0,0,modo]
+	order = [0,0]
 
 	auto = True #Desactivar para cuando se quiera correr con teclado.py
 
@@ -276,6 +276,19 @@ def main_control():
 								vr = -((v_vel + w_vel*(l/2))/r)
 								vl = -((v_vel - w_vel*(l/2))/r)
 								#print('----------------Voy Hacia Atras--------------------V_X: ' + str(round(v_x, 3)))
+							
+							vl = (vl/70)*200
+							vr = (vr/70)*200
+
+							if vl > 200:
+								vl = 200
+							elif vl < -200:
+								vl = -200
+							if vr > 200:
+								vr = 200
+							elif vr < -200:
+								vr = -200
+							
 							order[0], order[1] = vl + vel_adjust, vr + vel_adjust
 							vel_robot.data = order
 
@@ -294,7 +307,8 @@ def main_control():
 							pos_final_robot.angular.z = round(endPos[2],3)
 							pub_pos_final_status.publish(pos_final_robot)
 
-							print('EndPos: ' + str(endPos[0]) + ' ' + str(endPos[1]) + ' ' + str(round(endPos[2],3)) + ' | RHO: ' + str(round(rho,3)) + ' | alfa: ' + str(round(alpha,3)) + ' | Pose: ' + str(round(pos_x,3)) + ', ' + str(round(pos_y,3)) + ', ' + str(round(theta,3))+ ' | vel_robot: ' + str(vel_robot.data))
+							print(vel_robot.data)
+							#print('EndPos: ' + str(endPos[0]) + ' ' + str(endPos[1]) + ' ' + str(round(endPos[2],3)) + ' | RHO: ' + str(round(rho,3)) + ' | alfa: ' + str(round(alpha,3)) + ' | Pose: ' + str(round(pos_x,3)) + ', ' + str(round(pos_y,3)) + ', ' + str(round(theta,3))+ ' | vel_robot: ' + str(vel_robot.data))
 							sys.stdout.write("\033[K") # Clear to the end of line
 							sys.stdout.write("\033[F") # Cursor up one line
 							time.sleep(1)
