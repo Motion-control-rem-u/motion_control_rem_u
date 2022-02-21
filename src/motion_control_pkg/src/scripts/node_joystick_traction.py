@@ -56,8 +56,8 @@ def node_joystick_traction():
 
     print('Esperando...')
     # Espera a que se conecte el joystick fisico al computador
-    while pygame.joystick.get_count() != 1 and not rospy.is_shutdown():
-        rate.sleep()
+    #while pygame.joystick.get_count() != 1 and not rospy.is_shutdown():
+        #rate.sleep()
     print('Conectado')
     # Se crea la referencia al joystick
     joystick_ref = pygame.joystick.Joystick(0)

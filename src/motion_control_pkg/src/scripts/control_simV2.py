@@ -160,6 +160,7 @@ def main_control():
 
 				rho = np.sqrt(deltaX**2 + deltaY**2)
 				alpha = -theta + np.arctan2(deltaY, deltaX)
+				#revisar si es pi o 2pi
 				if alpha > np.pi:
 					alpha = alpha - np.pi 
 				elif alpha < -np.pi:
