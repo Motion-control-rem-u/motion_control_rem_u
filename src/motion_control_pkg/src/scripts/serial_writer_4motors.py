@@ -27,17 +27,19 @@ puerto = ''
 
 # Verificamos el puerto del arduino para hacer la conexion
 
-ports = list(serial.tools.list_ports.comports())
-for p in ports:
-    print(p.description)
-    if 'ttyACM' in p.description:
-        print ('This is an Arduino!')
-        puerto = p.description
+# ports = list(serial.tools.list_ports.comports())
+# print(len(ports) )
+# for p in ports:
+#     print(p.description)
+#     if 'ttyACM0' in p.description:
+#         print ('This is an Arduino!')
+#         puerto = p.description
 
 # Crea la conexion serial con el Arduino
 
-# arduino = serial.Serial('/dev/' + str(puerto), 115200, timeout=10)
+arduino = serial.Serial('/dev/ttyACM0' + str(puerto), 115200, timeout=10)
 
+# arduino = serial.Serial('ttyACMO', 115200, timeout=10)
 
 def habilitarMov(msg):  # Me indica si debo mover el robot autonomamente o no
     global auto, arduino, uso_arduino
@@ -158,7 +160,7 @@ def rover_serial_writer():
         encoded = (str(order) + '\n').encode('utf-8')
         print(left_u,right_u,left_d,right_d)
 
-        # arduino.write(encoded)
+        arduino.write(encoded)
 
         #print(encoded)
 
