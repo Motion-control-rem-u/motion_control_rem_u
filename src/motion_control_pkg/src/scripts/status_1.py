@@ -6,13 +6,15 @@ from geometry_msgs.msg import *
 from std_msgs.msg import *
 #from termcolor import colored
 
+#PRINTS ROVER STATUS IN TERMINAL. Position, movement, velocity adjustment, panic button.
 #ROBOCOL
+
 pos_x_info_anterior = 0
 pos_y_info_anterior = 0
 theta_info_anterior = 0
 cont = 0
-vel_lin_x_info = 0
-vel_ang_z_info = 0
+vel_izq = 0
+vel_der = 0
 rho_info, alpha_info = 0,0
 pos_x_info, pos_y_info, theta_info = 0,0,0
 pos_x_final_info, pos_y_final_info, theta_final_info, llegoAlaMeta = 0,0,0,0
@@ -27,9 +29,9 @@ def panic_callback(msg):
 	panic = msg.data
 
 def cmd_vel_callback(msg):
-	global vel_lin_x_info, vel_ang_z_info
-	vel_lin_x_info = msg.linear.x
-	vel_ang_z_info = msg.angular.z
+	global vel_izq, vel_der
+	vel_izq = msg[0]
+	vel_der = msg[1]
 
 def rho_callback(msg):
 	global rho_info
@@ -74,11 +76,11 @@ def vel_adjust_callback(msg):
 
 
 def info_status():
-	global vel_lin_x_info, vel_ang_z_info, rho_info, pos_x_info_anterior, pos_y_info_anterior, theta_info_anterior, cont, pos_x_info, pos_y_info, theta_info, pos_x_final_info, pos_y_final_info, theta_final_info, llegoAlaMeta, panic, puntos_faltantes_info
+	global vel_izq, vel_der, rho_info, pos_x_info_anterior, pos_y_info_anterior, theta_info_anterior, cont, pos_x_info, pos_y_info, theta_info, pos_x_final_info, pos_y_final_info, theta_final_info, llegoAlaMeta, panic, puntos_faltantes_info
 
 	rospy.init_node('status', anonymous=True)  # Inicia el nodo status
 
-	rospy.Subscriber("cmd_vel", Twist, cmd_vel_callback, tcp_nodelay=True)
+	rospy.Subscriber("cmd_wheels_vel", Float32MultiArray, cmd_vel_callback, tcp_nodelay=True)
 	rospy.Subscriber("Robocol/MotionControl/rho", Float32, rho_callback, tcp_nodelay=True)
 	rospy.Subscriber("Robocol/MotionControl/alpha", Float32, alpha_callback, tcp_nodelay=True)
 	rospy.Subscriber("Robocol/MotionControl/pos", Twist, pos_callback, tcp_nodelay=True)
@@ -89,33 +91,41 @@ def info_status():
 	
 	rate = rospy.Rate(10)
 
-
+	#Prints message with information from topics. 
 	while not rospy.is_shutdown():
 		mensaje = '______________________________ \n'
-		mensaje = mensaje + 'Vel. lin. x: ' + str(round(vel_lin_x_info,3)) + ' | Vel. ang. z: ' + str(round(vel_ang_z_info,3)) + '\n'
+		mensaje = mensaje + 'Vel. Izq: ' + str(round(vel_izq,3)) + ' | Vel. Der: ' + str(round(vel_der,3)) + '\n'
 		mensaje = mensaje + 'Rho: ' + str(round(rho_info,3)) + ' | Alpha: ' + str(round(alpha_info,3)) + '\n'
 		mensaje = mensaje + 'pos. x: ' + str(pos_x_info) + ' | pos. y: ' + str(pos_y_info) + ' | theta: ' + str(theta_info) + '\n'
 		mensaje = mensaje + 'pos. final x: ' + str(pos_x_final_info) + ' | pos. final y: ' + str(pos_y_final_info) + ' | theta final: ' + str(theta_final_info) + '\n'
 		mensaje = mensaje + 'Droped probes: ' + str(probe_cont) + '\n'
 		mensaje = mensaje + 'Puntos faltantes: ' + str(puntos_faltantes_info) + '\n'
 
+		#Notes if rver has reach its destination
 		if (llegoAlaMeta == 1):
 			mensaje = mensaje + 'YA LLEGO A LA META' + '\n'
 		else:
 			mensaje = mensaje + 'No ha llegado' + '\n'
 
 		#if (cont >= 1000):
-		if vel_lin_x_info < 0.01 and vel_lin_x_info > -0.01 and vel_ang_z_info < 0.01:
+#<<<<<<< joystick_remake
+		#Indicates movement of the rover
+		#if vel_lin_x_info < 0.01 and vel_lin_x_info > -0.01 and vel_ang_z_info < 0.01:
+#=======
+		if vel_izq < 0.01 and vel_izq > -0.01 and vel_der < 0.01:
+#>>>>>>> develop
 			mensaje = mensaje + 'Detenido \n'
 		else:
 			mensaje = mensaje + 'En movimiento'
-			if vel_lin_x_info < 0:
+			if vel_izq < 0:
 				mensaje = mensaje + ' - Voy hacia atras.'
 			mensaje = mensaje + '\n'
 		
+		#If rovers velocity is being manually adjusted.
 		if vel_adjust != 0:
 			mensaje = mensaje + 'La velocidad esta siendo ajustada por: ' + str(round(vel_adjust,3)) + '\n'
 
+		#On/Off panic button.
 		if panic == True:
 			mensaje = mensaje + 'Boton de PANICO \n'
 
