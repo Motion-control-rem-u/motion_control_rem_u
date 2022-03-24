@@ -182,6 +182,7 @@ def main_control():
 				
 
 				empezarDeNuevo = True
+				#Siempre que cambio de autonomo a manual, le digo al rover que vuelva a calcular rho y alpha, ya qu eme movi
 				while empezarDeNuevo == True:
 					while abs(alpha) > 0.05:
 						if auto == True:

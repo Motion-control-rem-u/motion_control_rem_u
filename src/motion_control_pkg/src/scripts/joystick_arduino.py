@@ -16,6 +16,8 @@ arduino = serial.Serial('/dev/ttyACMO', 115200, timeout=10)
 
 modo="d"
 
+modo="d"
+
 # Referencia del objeto del joystick
 joystick_ref = None
 # Referencia de eje #0 del joystick

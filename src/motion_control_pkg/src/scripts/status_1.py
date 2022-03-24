@@ -6,7 +6,9 @@ from geometry_msgs.msg import *
 from std_msgs.msg import *
 #from termcolor import colored
 
+#PRINTS ROVER STATUS IN TERMINAL. Position, movement, velocity adjustment, panic button.
 #ROBOCOL
+
 pos_x_info_anterior = 0
 pos_y_info_anterior = 0
 theta_info_anterior = 0
@@ -89,7 +91,7 @@ def info_status():
 	
 	rate = rospy.Rate(10)
 
-
+	#Prints message with information from topics. 
 	while not rospy.is_shutdown():
 		mensaje = '______________________________ \n'
 		mensaje = mensaje + 'Vel. Izq: ' + str(round(vel_izq,3)) + ' | Vel. Der: ' + str(round(vel_der,3)) + '\n'
@@ -99,13 +101,19 @@ def info_status():
 		mensaje = mensaje + 'Droped probes: ' + str(probe_cont) + '\n'
 		mensaje = mensaje + 'Puntos faltantes: ' + str(puntos_faltantes_info) + '\n'
 
+		#Notes if rver has reach its destination
 		if (llegoAlaMeta == 1):
 			mensaje = mensaje + 'YA LLEGO A LA META' + '\n'
 		else:
 			mensaje = mensaje + 'No ha llegado' + '\n'
 
 		#if (cont >= 1000):
+#<<<<<<< joystick_remake
+		#Indicates movement of the rover
+		#if vel_lin_x_info < 0.01 and vel_lin_x_info > -0.01 and vel_ang_z_info < 0.01:
+#=======
 		if vel_izq < 0.01 and vel_izq > -0.01 and vel_der < 0.01:
+#>>>>>>> develop
 			mensaje = mensaje + 'Detenido \n'
 		else:
 			mensaje = mensaje + 'En movimiento'
@@ -113,9 +121,11 @@ def info_status():
 				mensaje = mensaje + ' - Voy hacia atras.'
 			mensaje = mensaje + '\n'
 		
+		#If rovers velocity is being manually adjusted.
 		if vel_adjust != 0:
 			mensaje = mensaje + 'La velocidad esta siendo ajustada por: ' + str(round(vel_adjust,3)) + '\n'
 
+		#On/Off panic button.
 		if panic == True:
 			mensaje = mensaje + 'Boton de PANICO \n'
 
