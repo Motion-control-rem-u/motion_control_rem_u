@@ -126,7 +126,7 @@ def main_control():
 	beta = -theta - alpha
 
 	# Referencia a envio de mensaje
-	order = [0,0]
+	order = [0,0,0,0]
 
 	auto = True #Desactivar para cuando se quiera correr con teclado.py
 

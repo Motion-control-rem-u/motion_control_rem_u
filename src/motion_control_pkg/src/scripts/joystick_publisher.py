@@ -59,6 +59,7 @@ def node_joystick_traction():
     rospy.init_node('node_joystick_traction', anonymous=True)
     # Publica en el topico pwm_data
     pub_traction_orders = rospy.Publisher("Robocol/MotionControl/pwm_data", Float32MultiArray, queue_size=10)
+    pub_traction_orders = rospy.Publisher("Robocol/MotionControl/pwm_data", Float32MultiArray, queue_size=10)
     #pub_traction_orders = rospy.Publisher("/robocol/fpga/rpm", Int32MultiArray, queue_size=10)
     # Se define la tasa a la cual se ejecuta el nodo
     rate = rospy.Rate(10)
@@ -69,8 +70,8 @@ def node_joystick_traction():
     pygame.joystick.init()
 
     # Referencia a envio de mensaje
-    order = [0,0]
-    #[Lado izquierdo, lado derecho, 6 (Adelante, atras, neutro, freno)]
+    order = [0,0,0,0]
+    #[Lado izquierdo arriba, lado derecho arriba, Lado izquierdo abajo, lado derecho abajo, 6 (Adelante, atras, neutro, freno)]
 
 
     pub_order = Float32MultiArray()
@@ -96,10 +97,13 @@ def node_joystick_traction():
         pass  # Se corre el nodo hasta que este se finalice
     
 
-    left,right = 0,0
+    left_u,right_u,left_d,right_d = 0,0,0,0
     while not rospy.is_shutdown():
+        #medicion_tiempo=time.time()
+
         empty_event_queue()
         
+
         if axis_moved:
 
             axis0 = joystick_ref.get_axis(0)
@@ -108,12 +112,12 @@ def node_joystick_traction():
             axis3 = joystick_ref.get_axis(3)
             
             if abs(round(axis2,1)) <= deadzone_rot:
-                left, right = stick_steering(axis1, axis0, max_rpm*(-axis3+1)/2)
+                left_u,right_u,left_d,right_d = stick_steering(axis1, axis0, max_rpm*(-axis3+1)/2)
             else:
-                left, right = int((max_rpm*(-axis3+1)/2)*axis2), int(-(max_rpm*(-axis3+1)/2)*axis2)
+                left_u,right_u,left_d,right_d = int((max_rpm*(-axis3+1)/2)*axis2),int(-(max_rpm*(-axis3+1)/2)*axis2),int((max_rpm*(-axis3+1)/2)*axis2), int(-(max_rpm*(-axis3+1)/2)*axis2)
 
-            time.sleep(0.5)
-            order[0], order[1] = left, right
+            #time.sleep(0.5)
+            order[0],order[1],order[2], order[3] = left_u,right_u,left_d,right_d
             #order[2], order[3] = np.abs(left), np.abs(right)
             #order[0], order[1] = left, right
             #order[2], order[3] = left, right
@@ -128,18 +132,24 @@ def node_joystick_traction():
             
             pub_traction_orders.publish(pub_order)
             axis_moved = False
+        
 
-        order[0], order[1] = 0,0
+        #order[0],order[1],order[2], order[3] = 0,0,0,0
         #order[2], order[3] = left, right
         #order.header.stamp = rospy.Time.now()
         #order.header.seq = order.header.seq + 1
         #order.sensibility = int(100)
         #pub_order.data = order
         #pub_traction_orders.publish(pub_order)
-        axis_moved = False
+        #axis_moved = False
         rate.sleep()
+        
+        
+        #medicion_tiempo_fin=time.time()
+        #print(medicion_tiempo_fin-medicion_tiempo)
 
-
+# Se repite la informacion para los motores left_u y left_d,right_u y right_d.
+# Sin embargo, si hay que hacer cambios es aca
 def stick_steering(x, y, sensibilidad_rcv):
     # Convierte a polar
     r = math.hypot(-x, -y)
@@ -147,21 +157,27 @@ def stick_steering(x, y, sensibilidad_rcv):
     # Rota 45 grados
     t += math.pi / 4
     # Retorna a cartesianas
-    left = r * math.cos(t)
-    right = r * math.sin(t)
+    left_u = r * math.cos(t)
+    right_u = r * math.sin(t)
+    left_d = r * math.cos(t)
+    right_d = r * math.sin(t)
     # Reescala a nuevas coordenadas
-    left = left * math.sqrt(2)
-    right = right * math.sqrt(2)
+    left_u = left_u * math.sqrt(2)
+    right_u = right_u * math.sqrt(2)
+    left_d = left_d * math.sqrt(2)
+    right_d = right_d * math.sqrt(2)
     # clamp to -1/+1
-    left = max(min(left, 1), -1)
-    right = max(min(right, 1), -1)
+    left_u = max(min(left_u, 1), -1)
+    right_u = max(min(right_u, 1), -1)
+    left_d = max(min(left_d, 1), -1)
+    right_d = max(min(right_d, 1), -1)
 
     min_mov = deadzone_stick*math.sqrt(2)
 
     if(r<=min_mov):
-        left,right = 0,0
+        left_u,right_u,left_d,right_d = 0,0,0,0
 
-    return int(sensibilidad_rcv*left), int(sensibilidad_rcv*right)
+    return int(sensibilidad_rcv*left_u), int(sensibilidad_rcv*right_u),int(sensibilidad_rcv*left_d), int(sensibilidad_rcv*right_d)
 
 def empty_event_queue():
     global axis_moved
