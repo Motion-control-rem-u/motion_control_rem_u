@@ -8,9 +8,13 @@ import serial
 import time
 
 #PERMITE USAR EL JOYSTICK Y ENVIAR LA INFORMACION POR USB(Serial) AL ARDUINO.
-#ROBOCOL
+#Funciona SOLO, nada de ROS. SOLO PARA PRUEBAS
+#ROBOCOL 2021-2
 
-arduino = serial.Serial('/dev/ttyACM0', 115200, timeout=10)
+#arduino = serial.Serial('/dev/ttyS4', 115200, timeout=10)
+arduino = serial.Serial('/dev/ttyACMO', 115200, timeout=10)
+
+modo="d"
 
 modo="d"
 
