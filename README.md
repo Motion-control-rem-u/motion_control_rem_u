@@ -2,7 +2,7 @@
 
 ## ERC 3rd Test Drive Preplaned Route
 This is the Robocol team's planned approach for the third test drive of the European Rover Challenge 2021.
-![Example image](src/motion_control_pkg/src/scripts/mapa_erc.png)
+![Example image](src/motion_control_pkg/src/scripts/Mapa_Ruta_Planeada.png)
 
 The image above is the preplanned path for the test drive. It was generated using an A* path planning algorithm built in python, which we might also use during the test. We built it taking into account the given waypoints on the marsyard.
 Our plan is to make leo rover follow this path semi-autonomously using ROS nodes for monitoring, teleoperation and autonomous navigation. In the case we find an unforeseen obstacle, we will switch to teleoperated navigation. We will also constantly pusblish an image of the marsyard with the planned path and the current estimated pose of the rover.  

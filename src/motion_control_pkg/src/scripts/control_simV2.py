@@ -23,7 +23,7 @@ deltaX, deltaY = 0, 0
 
 rho = 0
 auto = 0
-hayRuta = 1 #poner en cero cuando se vaya a probar con planeacion
+hayRuta = 0 #poner en cero cuando se vaya a probar con planeacion
 ruta = np.array([])
 panic = False
 
@@ -102,7 +102,7 @@ def main_control():
 	rospy.Subscriber('Robocol/MotionControl/kp', Float32, vel_adjust_callback, tcp_nodelay=True)
 
 	#ruta = np.array([[-0.3,-0.3], [-0.3,0.3]])
-	ruta = np.array([[2.5,0.019],[1.5,1],[-0.035,0.0189]])
+	#ruta = np.array([[2.5,0.019],[1.5,1],[-0.035,0.0189]])
 
 	vel_robot = Twist()
 	pos_robot = Twist()
