@@ -46,7 +46,7 @@ pip3 install opencv-python matplotlib rospkg pynput
 
 *Troubleshooting
 Pip install [opencv-python](https://pypi.org/project/opencv-python/) fails with ModuleNotFoundError: No module named 'skbuild':
-your pip version must be >= 19.3. Please upgrade pip with pip install --upgrade pip.
+your pip version must be >= 19.3. Please upgrade pip with pip3 install --upgrade pip.
 
 #### Building
 
