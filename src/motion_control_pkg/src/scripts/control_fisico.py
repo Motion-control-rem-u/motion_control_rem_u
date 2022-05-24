@@ -32,6 +32,15 @@ K_alpha = 0.4
 K_beta = -0.0
 vel_adjust = 0.0
 
+# Nuevo codigo para pasar a PWM
+oldMax=10
+oldMin=0
+newMax=255
+newMin=0
+
+oldRange = (oldMax - oldMin)
+newRange = (newMax - newMin) 
+
 def position_callback(msg): #Me regresa la posicion en el marco inercial del robot
 	global rate, pos_x, pos_y, theta
 
@@ -87,6 +96,8 @@ def main_control():
 	print(' ')
 	rospy.init_node('control', anonymous=True) #Inicio nodo
 
+    # Publica en el topico pwm_data
+	pub_traction_orders = rospy.Publisher("Robocol/MotionControl/pwm_data", Float32MultiArray, queue_size=10)
 	pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
 	pub_probe = rospy.Publisher('probe_deployment_unit/drop', Empty, queue_size=1)
 	pub_pos_status = rospy.Publisher('Robocol/MotionControl/pos', Twist, queue_size=10)
@@ -101,19 +112,28 @@ def main_control():
 	rospy.Subscriber('Robocol/MotionControl/flag_panic', Bool, panic_callback, tcp_nodelay=True)
 	rospy.Subscriber('Robocol/MotionControl/kp', Float32, vel_adjust_callback, tcp_nodelay=True)
 
+	print("Paso pubs y susbs")
 	#ruta = np.array([[-0.3,-0.3], [-0.3,0.3]])
 	#ruta = np.array([[2.5,0.019],[1.5,1],[-0.035,0.0189]])
+
+    # Referencia a envio de mensaje
+	order = [0,0,0,0]
+	pub_order = Float32MultiArray()
+	
+	l = 0.73
 
 	vel_robot = Twist()
 	pos_robot = Twist()
 	pos_final_robot = Twist()
+
+	print("paso inicializacion de variables")
 
 
 	rho = np.sqrt(endPos[0]**2 + endPos[1]**2)
 	alpha = -theta + np.arctan2(endPos[1], endPos[0])
 	beta = -theta - alpha
 
-	auto = True
+	#auto = True
 
 	while not rospy.is_shutdown():
 		empezarDeNuevo = False
@@ -123,11 +143,22 @@ def main_control():
 		vel_robot.linear.y = 0
 		vel_robot.angular.z = 0
 		pub.publish(vel_robot)
+		
 
-		v_x = 0
-		v_y = 0
-		v_omega = 0
+		left_u=0
+		right_u=0
+		left_d=0
+		right_d=0
+		order[0],order[1],order[2], order[3] = left_u,right_u,left_d,right_d
+        
 
+		pub_order.data = order
+		pub_traction_orders.publish(pub_order)
+		
+		# v_x = 0
+		# v_y = 0
+		# v_omega = 0
+		# print("ruta")
 		print('Hay ruta?  ' + ('Si' if hayRuta == 1 else 'No'))
 		
 		print('Ruta: ' + str(ruta))
@@ -145,6 +176,7 @@ def main_control():
 
 		
 		while hayRuta == 1:
+			print("segundo while")
 			pos_final_robot.linear.z = 0 #Indica que no ha llegado al destino.
 			cont_puntos_destino = 0
 			print('Esperando comando de flag_autonomo...')
@@ -167,6 +199,7 @@ def main_control():
 					alpha= alpha +np.pi
 
 				beta = 0
+                
 
 				pos_robot.linear.x = round(pos_x,3)
 				pos_robot.linear.y = round(pos_y,3)
@@ -179,7 +212,7 @@ def main_control():
 				pos_final_robot.angular.x = len(ruta) - cont_puntos_destino #Para no usar mas publishers, se usara esto para indicar el num. de puntos que faltan
 				cont_puntos_destino = cont_puntos_destino + 1
 				pub_pos_final_status.publish(pos_final_robot)
-				
+				                
 
 				empezarDeNuevo = True
 				#Siempre que cambio de autonomo a manual, le digo al rover que vuelva a calcular rho y alpha, ya qu eme movi
@@ -214,6 +247,40 @@ def main_control():
 							vel_robot.linear.y = 0
 							vel_robot.angular.z = v_omega +vel_adjust
 							pub.publish(vel_robot)
+
+                            # Publicacion a velocidades pwm de cada llanta
+
+                            
+							left_u=-(w_vel*l)/2
+							right_u=(w_vel*l)/2
+							left_d=-(w_vel*l)/2
+							right_d=(w_vel*l)/2
+
+							# Hacer cambio a la escala de PWM (255)
+							left_u = (((left_u - oldMin) * newRange) / oldRange) + newMin
+							right_u = (((right_u - oldMin) * newRange) / oldRange) + newMin
+							left_d = (((left_d - oldMin) * newRange) / oldRange) + newMin
+							right_d = (((right_d - oldMin) * newRange) / oldRange) + newMin
+
+							# Revisar que el valor sea mayor o igual a -255
+							left_u=max(left_u,-255)
+							right_u=max(right_u,-255)
+							left_d=max(left_d,-255)
+							right_d=max(right_d,-255)
+
+							# Revisar que el valor sea mayor o igual a -255
+							left_u=min(left_u,255)
+							right_u=min(right_u,255)
+							left_d=min(left_d,255)
+							right_d=min(right_d,255)
+
+							order[0],order[1],order[2], order[3] = left_u,right_u,left_d,right_d
+
+							pub_order.data = order
+							pub_traction_orders.publish(pub_order)
+
+                            # Sigue codigo normal
+
 							pub_alpha_status.publish(alpha)
 
 							pos_robot.linear.x = round(pos_x,3)
@@ -282,6 +349,43 @@ def main_control():
 							vel_robot.angular.z = v_omega
 							#vel_robot.angular.z = 0
 							pub.publish(vel_robot)
+
+
+                            # Publicacion a velocidades pwm de cada llanta
+
+                            
+							left_u=v_x + vel_adjust -(w_vel*l)/2
+							right_u=v_x + vel_adjust+(w_vel*l)/2
+							left_d=v_x + vel_adjust-(w_vel*l)/2
+							right_d=v_x + vel_adjust+(w_vel*l)/2
+
+							# Hacer cambio a la escala de PWM (255)
+							left_u = (((left_u - oldMin) * newRange) / oldRange) + newMin
+							right_u = (((right_u - oldMin) * newRange) / oldRange) + newMin
+							left_d = (((left_d - oldMin) * newRange) / oldRange) + newMin
+							right_d = (((right_d - oldMin) * newRange) / oldRange) + newMin
+
+							# Revisar que el valor sea mayor o igual a -255
+							left_u=max(left_u,-255)
+							right_u=max(right_u,-255)
+							left_d=max(left_d,-255)
+							right_d=max(right_d,-255)
+
+							# Revisar que el valor sea mayor o igual a -255
+							left_u=min(left_u,255)
+							right_u=min(right_u,255)
+							left_d=min(left_d,255)
+							right_d=min(right_d,255)
+
+							order[0],order[1],order[2], order[3] = left_u,right_u,left_d,right_d
+
+							pub_order.data = order
+							pub_traction_orders.publish(pub_order)
+
+                            # Sigue codigo normal
+
+
+
 							pub_alpha_status.publish(alpha)
 							pub_rho_status.publish(rho) #Se publica el rho del robot a status
 
@@ -320,6 +424,39 @@ def main_control():
 				pub.publish(vel_robot)
 				pub_alpha_status.publish(alpha)
 
+                # Publicacion a velocidades pwm de cada llanta
+
+                
+				left_u=v_x  -(w_vel*l)/2
+				right_u=v_x +(w_vel*l)/2
+				left_d=v_x -(w_vel*l)/2
+				right_d=v_x +(w_vel*l)/2
+
+				# Hacer cambio a la escala de PWM (255)
+				left_u = (((left_u - oldMin) * newRange) / oldRange) + newMin
+				right_u = (((right_u - oldMin) * newRange) / oldRange) + newMin
+				left_d = (((left_d - oldMin) * newRange) / oldRange) + newMin
+				right_d = (((right_d - oldMin) * newRange) / oldRange) + newMin
+
+				# Revisar que el valor sea mayor o igual a -255
+				left_u=max(left_u,-255)
+				right_u=max(right_u,-255)
+				left_d=max(left_d,-255)
+				right_d=max(right_d,-255)
+
+				# Revisar que el valor sea mayor o igual a -255
+				left_u=min(left_u,255)
+				right_u=min(right_u,255)
+				left_d=min(left_d,255)
+				right_d=min(right_d,255)
+
+				order[0],order[1],order[2], order[3] = left_u,right_u,left_d,right_d
+
+				pub_order.data = order
+				pub_traction_orders.publish(pub_order)
+
+                # Sigue codigo normal
+
 				#Se publica la posicion del robot a status
 				pos_robot.linear.x = round(pos_x,3)
 				pos_robot.linear.y = round(pos_y,3)
@@ -339,7 +476,7 @@ def main_control():
 				print('Estamos en modo manual.')
 
 			rate.sleep()
-		rate.sleep()
+        rate.sleep()
 if __name__ == '__main__':
 	try:
 		main_control()
