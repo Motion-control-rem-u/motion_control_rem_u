@@ -3,12 +3,12 @@ name: Docker
 on:
   push:
     branches:
-      - main
+      - docker-humble
     tags:
       - '*'
   pull_request:
     branches:
-      - main
+      - docker-humble
   workflow_dispatch:
       
 env:
