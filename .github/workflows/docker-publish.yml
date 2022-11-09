@@ -32,7 +32,7 @@ jobs:
         with:
           images: ${{ env.IMAGE_ID }}
           tags: |
-            type=raw,value=humble,enable=${{ endsWith(github.ref, 'docker-humbe') }}
+            type=raw,value=humble,enable=${{ endsWith(github.ref, 'docker-humble') }}
             type=ref,event=tag
           flavor: |
             latest=false
