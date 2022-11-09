@@ -10,7 +10,7 @@ RUN apt update && apt -y upgrade && apt install -y \
 # install python requirements 
 RUN sudo apt-get -y install python3-pip 
 RUN python3 -m pip install --upgrade pip 
-RUN sudo apt-get install ros-melodic-catkin python3-catkin-tools
+RUN sudo apt-get -y install ros-melodic-catkin python3-catkin-tools
 
 
 RUN pip3 install \
