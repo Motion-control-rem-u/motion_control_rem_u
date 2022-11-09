@@ -33,7 +33,7 @@ K_beta = -0.0
 vel_adjust = 0.0
 
 # Nuevo codigo para pasar a PWM
-oldMax=10
+oldMax=50
 oldMin=0
 newMax=255
 newMin=0
@@ -476,7 +476,7 @@ def main_control():
 				print('Estamos en modo manual.')
 
 			rate.sleep()
-        rate.sleep()
+        #rate.sleep()
 if __name__ == '__main__':
 	try:
 		main_control()
