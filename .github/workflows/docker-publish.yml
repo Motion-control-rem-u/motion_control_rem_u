@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - docker-melodic
     tags:
       - '*'
   pull_request:
