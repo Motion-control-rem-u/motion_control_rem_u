@@ -33,7 +33,7 @@ jobs:
         with:
           images: ${{ env.IMAGE_ID }}
           tags: |
-            type=raw,value=latest,enable=${{ endsWith(github.ref, 'docker-melodic') }}
+            type=raw,value=melodic,enable=${{ endsWith(github.ref, 'docker-melodic') }}
             type=ref,event=tag
           flavor: |
             latest=false
