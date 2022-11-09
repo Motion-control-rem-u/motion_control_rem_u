@@ -1,14 +1,17 @@
 # build on top of the erc provided base image
-FROM  ghcr.io/europeanroverchallenge/erc-remote-image-base:latest
+FROM  ros:melodic
 # install some dependencies. Vim for quick viewing of scripts inside the cli.
 RUN apt update && apt -y upgrade && apt install -y \
-    python3-vcstool \
+    #python3-vcstool \
     ros-melodic-rospy-tutorials \ 
-    ros-melodic-tf \
-    vim
+    ros-melodic-tf 
+    #vim
      
 # install python requirements 
+RUN sudo apt-get -y install python3-pip 
 RUN python3 -m pip install --upgrade pip 
+RUN sudo apt-get install ros-melodic-catkin python3-catkin-tools
+
 
 RUN pip3 install \
     numpy==1.19.4 \
