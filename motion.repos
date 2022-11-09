@@ -1,5 +1,5 @@
 repositories:
   motion:
     type: git
-    url: https://github.com/robocol-rem-u/motion_control.git
+    url: https://github.com/Motion-control-rem-u/motion_control_rem_u.git
     
